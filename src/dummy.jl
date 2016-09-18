@@ -8,13 +8,15 @@ kernel_queue = []
 
 function register_kernel{F<:Function}(::Type{DummyTarget}, f::Type{F}, args)
     signature = (f, args...)
-    kernel_id = get(kernels, signature, :nothing)
-    if kernel_id == :nothing
-        kernel_id = gensym("DummyKernel")
-        kernels[signature] = kernel_id
-        push!(kernel_queue, (kernel_id, f, args))
-        info("Registered new kernel $kernel_id for call signature $signature")
-    end
+    kernel_id = gensym("DummyKernel")
+    info("Registered new kernel $kernel_id for call signature $signature")
+    # kernel_id = get(kernels, signature, :nothing)
+    # if kernel_id == :nothing
+    #     kernel_id = gensym("DummyKernel")
+    #     kernels[signature] = kernel_id
+    #     push!(kernel_queue, (kernel_id, f, args))
+    #     info("Registered new kernel $kernel_id for call signature $signature")
+    # end
     kernel_id
 end
 
@@ -36,10 +38,12 @@ function compile_all()
         kernel_id, functype, argtypes = pop!(kernel_queue)
         info("Translating $kernel_id $functype$argtypes")
 
+        dump(functype)
+
         # Get the typed AST to translate:
         ast = code_typed(functype, argtypes...)
         info(ast)
-        
+
         # <here is where the actual translation would occur>.
     end
 end
