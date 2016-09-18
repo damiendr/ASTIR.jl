@@ -2,21 +2,12 @@
 
 abstract DummyTarget
 
-
-kernels = Dict{Tuple,Symbol}()
 kernel_queue = []
 
 function register_kernel{F<:Function}(::Type{DummyTarget}, f::Type{F}, args)
     signature = (f, args...)
     kernel_id = gensym("DummyKernel")
-    info("Registered new kernel $kernel_id for call signature $signature")
-    # kernel_id = get(kernels, signature, :nothing)
-    # if kernel_id == :nothing
-    #     kernel_id = gensym("DummyKernel")
-    #     kernels[signature] = kernel_id
-    #     push!(kernel_queue, (kernel_id, f, args))
-    #     info("Registered new kernel $kernel_id for call signature $signature")
-    # end
+    push!(kernel_queue, (kernel_id, f, args))
     kernel_id
 end
 
@@ -33,12 +24,13 @@ end
 function compile_all()
     if length(kernel_queue) > 1
         info("Batch translation of $(length(kernel_queue)) kernels")
+        # Our lazy translation scheme allows for batch translation of several
+        # kernels. This is much more efficient, eg. when translating with a
+        # command-line tool that has a significant startup overhead.
     end
     while !isempty(kernel_queue)
         kernel_id, functype, argtypes = pop!(kernel_queue)
         info("Translating $kernel_id $functype$argtypes")
-
-        dump(functype)
 
         # Get the typed AST to translate:
         ast = code_typed(functype, argtypes...)
