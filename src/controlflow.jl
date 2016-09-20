@@ -154,22 +154,19 @@ function raise_flow(istart, flow::FlowGraph, seen=Set(Int[]), while_start=-1, wh
 #            println("$i: 'if' $test $else_target")
 
             if !isempty(backwards) && else_target == backwards[1] + 1
-
-                # backwards jump: translate it with a "while true" statement
-                if i != while_start # otherwise we're already there
-    #                println("While loop from $i to $backwards "
-    #                        "$while_start $while_end")
-                    while_body, tail = raise_flow(i+1, flow, seen, i, backwards[1])
-                    if tail != -1 && tail != i
-                        error("Bad 'while' reconvergence $i:$tail")
-                    end
-                    while_stmt = Expr(:while, test, Expr(:block, while_body...))
-                    push!(dest, while_stmt)
-                    i = backwards[1] + 1
-                    continue
+                # 'while $test' loop.
+#                println("While loop from $i to $backwards "
+#                        "$while_start $while_end")
+                while_body, tail = raise_flow(i+1, flow, seen, i, backwards[1])
+                if tail != -1 && tail != i
+                    error("Bad 'while' reconvergence $i:$tail")
                 end
+                while_stmt = Expr(:while, test, Expr(:block, while_body...))
+                push!(dest, while_stmt)
+                i = backwards[1] + 1
+                continue
             else
-
+                # 'if then else' branch.
                 # Visit both branches without letting each branch know
                 # the nodes seen by the other branch:
                 seen_if = Set(seen)
@@ -202,9 +199,8 @@ function raise_flow(istart, flow::FlowGraph, seen=Set(Int[]), while_start=-1, wh
                     error("Bad 'if' reconvergence $i:$if_tail/$else_tail")
                 end
             end
-
         elseif !isempty(backwards)
-            # backwards jump: translate it with a "while true" statement
+            # 'while true' statement
             if i != while_start # otherwise we're already there
 #                println("While loop from $i to $backwards "
 #                        "$while_start $while_end")
@@ -220,7 +216,7 @@ function raise_flow(istart, flow::FlowGraph, seen=Set(Int[]), while_start=-1, wh
         end
 
         # Just a regular statement:
-        push!(dest, LineNumberNode(i))
+#        push!(dest, LineNumberNode(i))
         push!(dest, stmt)
         i += 1
     end
