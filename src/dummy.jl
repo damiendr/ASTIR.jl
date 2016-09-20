@@ -4,43 +4,17 @@ abstract DummyTarget
 
 kernel_queue = []
 
-function register_kernel{F<:Function}(::Type{DummyTarget}, f::Type{F}, args)
-    signature = (f, args...)
-    kernel_id = gensym("DummyKernel")
-    push!(kernel_queue, (kernel_id, f, args))
-    kernel_id
-end
 
-function call_kernel{kernel_id}(::Type{DummyTarget}, ::Type{Val{kernel_id}},
-                                f::Function, args::Tuple)
-    # Ensure all kernels encountered so far have been translated:
-    compile_all()
-
-    # In this dummy implementation we just call the original function:
-    info("Calling kernel $kernel_id")
-    f(args...)
-end
-
-function compile_all()
-    if length(kernel_queue) > 1
-        info("Batch translation of $(length(kernel_queue)) kernels")
-        # Our lazy translation scheme allows for batch translation of several
-        # kernels. This is much more efficient, eg. when translating with a
-        # command-line tool that has a significant startup overhead.
-    end
-    while !isempty(kernel_queue)
-        kernel = pop!(kernel_queue)
-        compile(kernel...)
-    end
-end
+dummy_call(f, args) = f(args...)
 
 
-
-function compile(kernel_id, functype, argtypes)
-    info("Translating $kernel_id $functype$argtypes")
+function translate_kernel(target::Type{DummyTarget}, kernel_id, signature)
+    info("Translating $kernel_id $signature")
 
     # Get the typed AST to translate:
+    functype, argtypes = signature
     ast = code_typed(functype, argtypes...)
+    println(ast)
     ast = unbox(ast)
 
     flow = FlowGraph(ast)
@@ -51,6 +25,7 @@ function compile(kernel_id, functype, argtypes)
         println(s)
     end
 
-    # <here is where the actual translation would occur>.
+    dummy_call
 end
+
 

@@ -9,6 +9,7 @@ function Base.code_typed{T<:Function}(functype::Type{T}, argtypes...)
     ast = Base.uncompressed_ast(m[3], codeinfo)
 end
 
+
 function sexpr(obj)
     io = IOBuffer()
     Base.Meta.show_sexpr(io, obj)
