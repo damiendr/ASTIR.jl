@@ -29,13 +29,28 @@ function compile_all()
         # command-line tool that has a significant startup overhead.
     end
     while !isempty(kernel_queue)
-        kernel_id, functype, argtypes = pop!(kernel_queue)
-        info("Translating $kernel_id $functype$argtypes")
-
-        # Get the typed AST to translate:
-        ast = code_typed(functype, argtypes...)
-        info(ast)
-
-        # <here is where the actual translation would occur>.
+        kernel = pop!(kernel_queue)
+        compile(kernel...)
     end
 end
+
+
+
+function compile(kernel_id, functype, argtypes)
+    info("Translating $kernel_id $functype$argtypes")
+
+    # Get the typed AST to translate:
+    ast = code_typed(functype, argtypes...)
+    ast = unbox(ast)
+
+    flow = FlowGraph(ast)
+    println(flow)
+    showgraph(flow)
+    statements, _ = raise_flow(1, flow)
+    for s in statements
+        println(s)
+    end
+
+    # <here is where the actual translation would occur>.
+end
+
