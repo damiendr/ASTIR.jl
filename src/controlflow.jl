@@ -51,9 +51,9 @@ function FlowGraph(ast::CodeInfo)
         end
     end
 
-    for (i, stmt) in enumerate(statements)
-        println("$i $stmt")
-    end
+    # for (i, stmt) in enumerate(statements)
+    #     println("$i $stmt")
+    # end
 
     FlowGraph(ast, statements, in_edges)
 end
@@ -114,18 +114,18 @@ function raise_flow(istart, flow::FlowGraph, seen=Set(Int[]), while_start=-1, wh
         # =======================================
         for j in flow.in_edges[i]
             if j < i
-                print("$istart-$i: checking $j...")
+#                print("$istart-$i: checking $j...")
                 if !(j in seen)
-                    println("WAIT")
+#                    println("WAIT")
                     return dest, i
-                else
-                    println("OK")
+#                else
+#                    println("OK")
                 end
             end
         end
 
         # OK, we're processing that node
-        println("$istart-$i: proceed")
+#        println("$istart-$i: proceed")
         push!(seen, i)
 
 
@@ -178,7 +178,7 @@ function raise_flow(istart, flow::FlowGraph, seen=Set(Int[]), while_start=-1, wh
                 seen_else = Set(seen)
                 else_branch, else_tail = raise_flow(else_target, flow, seen_else, while_start, while_end)
 
-                println("$i: 'if' branches reached $if_tail/$else_tail")
+#                println("$i: 'if' branches reached $if_tail/$else_tail")
 
                 # Check for proper reconvergence:
                 if else_tail == if_tail || else_tail == -1 || if_tail == -1
@@ -226,15 +226,5 @@ function raise_flow(istart, flow::FlowGraph, seen=Set(Int[]), while_start=-1, wh
     end
 
     dest, -1
-end
-
-function raise_while(i, flow, seen, while_start, while_end)
-#                println("While loop from $i to $backwards "
-#                        "$while_start $while_end")
-    while_body, tail = raise_flow(i, flow, seen, i, backwards[1])
-    if tail != -1 && tail != i
-        error("Bad 'while' reconvergence $i:$tail")
-    end
-    while_stmt = Expr(:while, :true, Expr(:block, while_body...))
 end
 

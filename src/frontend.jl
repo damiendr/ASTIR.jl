@@ -15,7 +15,8 @@ end
 Dispatch point for kernels.
 """
 function kernel_call(kernel_id::Symbol, target, f::Function, args)
-    # Keep me as fast as possible!
+    # Keep me as fast as possible! Currently the overhead
+    # is about 2-3x that of regular dispatch.
     nf = get(kernel_cache, kernel_id, Nullable{Function}())
     if isnull(nf)
         # Got a new kernel!
@@ -39,6 +40,13 @@ end
 Main entry point (kernel-per-kernel translation).
 """
 @generated function translated(f::Function, target, args...)
+    # We use the @generated mechanism to associate a kernel ID
+    # to each new call signature. The mechanism is robust to
+    # methods being redefined, ie. it will correctly generate
+    # a new kernel ID in that case.    
+    # This is much faster (2-3x) than looking up the method in
+    # Julia's dispatch table and then looking up the kernel ID
+    # for that method at runtime.
     kernel_id = gensym("kernel")
     quote
         ASTIR.kernel_call($(QuoteNode(kernel_id)), target, f, args)
@@ -46,13 +54,26 @@ Main entry point (kernel-per-kernel translation).
 end
 
 """
-Main entry point with batch compilation.
-(may be problematic, see https://github.com/JuliaLang/julia/issues/18568)
+Main entry point with batch translation.
+
+Batch translation is very advantageous when the translation involves a command-
+line tool with high startup overhead, eg. compilers.
+
+This entry point (ab)uses type inference to get a peek at kernels that *may*
+be about to be executed, *before* they're actually executed. It builds a list
+of candidates that can be batch-translated the first time the code is run.
+
+Note: this technique may be in fact be proscribed, see:
+https://github.com/JuliaLang/julia/issues/18568
 """
 @generated function batch_translated{target}(f::Function, t::Type{target}, args...)
     kernel_id = gensym("kernel")
     signature = (f, args)
     push!(translate_queue, (target, kernel_id, signature))
+    # This function is typically called only once per new type
+    # signature, but may occasionally be called a handful of times,
+    # which may lead to some redundant translations being triggered
+    # in batch mode. The overhead is usually small enough to be ignored.
     quote
         ASTIR.translate_all()
         ASTIR.kernel_call($(QuoteNode(kernel_id)), t, f, args)
@@ -61,16 +82,17 @@ end
 
 function translate_all()
     if isempty(translate_queue)
-        return
+        return # fast trivial path
     end
 
-    # Group by target
+    # Group queued kernels by target:
     by_target = DefaultDict(DataType,Vector,[])
     while !isempty(translate_queue)
         target, kernel_id, signature = pop!(translate_queue)
         push!(by_target[target], (kernel_id, signature))
     end
     
+    # Translate each target group:
     for (target, kernels) in by_target
         funcs = translate_batch(target, kernels)
         for (kernel_func, (kernel_id, signature)) in zip(funcs, kernels)
@@ -81,7 +103,10 @@ function translate_all()
     end
 end
 
-""" Default batch translate implementation """
+"""
+Default batch translate implementation.
+Targets can override this for better efficiency when translating many kernels at once.
+"""
 function translate_batch(target::Any, kernels)
     [translate_kernel(target, args...) for args in kernels]
 end
