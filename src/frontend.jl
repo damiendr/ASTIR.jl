@@ -43,7 +43,8 @@ Main entry point (kernel-per-kernel translation).
     # We use the @generated mechanism to associate a kernel ID
     # to each new call signature. The mechanism is robust to
     # methods being redefined, ie. it will correctly generate
-    # a new kernel ID in that case.    
+    # a new kernel ID in that case. EDIT: NOT! need to wait
+    # for fix to #265.
     # This is much faster (2-3x) than looking up the method in
     # Julia's dispatch table and then looking up the kernel ID
     # for that method at runtime.

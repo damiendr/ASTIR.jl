@@ -18,8 +18,13 @@ function FlowGraph(ast::CodeInfo)
     statements = []
     targets = Dict{Int,Int}()
     for (i, stmt) in enumerate(ast.code)
-        if isa(stmt, LineNumberNode)
+        if isa(stmt, LineNumberNode) || isexpr(stmt, :inbounds)
             # skip these, they complicate flow analysis
+            # (they may prevent detecting some jumps as break, return or continue)
+            continue
+        end
+        if isexpr(stmt, :meta) && stmt.args[1] in (:pop_loc, :push_loc)
+            # ditto
             continue
         end
         if isa(stmt, LabelNode)
@@ -51,9 +56,9 @@ function FlowGraph(ast::CodeInfo)
         end
     end
 
-    # for (i, stmt) in enumerate(statements)
-    #     println("$i $stmt")
-    # end
+    for (i, stmt) in enumerate(statements)
+        println("$i $stmt")
+    end
 
     FlowGraph(ast, statements, in_edges)
 end

@@ -20,14 +20,14 @@ function translate_kernel(target::Type{DummyTarget}, kernel_id, signature)
     
     info("Recovering structured control flow...")
     flow = FlowGraph(ast)
+    showgraph(flow)
+
     statements, _ = raise_flow(1, flow)
     for s in statements
         println(s)
     end
 
     info("Done translating.")
-#    println(flow)
-#    showgraph(flow)
 
     dummy_call
 end
